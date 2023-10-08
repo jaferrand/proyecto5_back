@@ -3,7 +3,7 @@ const {createUser, getUsers, editUser, deleteUser}  = require('../controllers/us
 
 const userRouter = express.Router();
 
-userRouter.route('/users')
+userRouter.route('/')
     .post(createUser)
     .get(getUsers)
 

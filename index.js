@@ -2,16 +2,18 @@ const express = require("express");
 const userRouter = require("./routes/userRoutes");
 const productRouter = require('./routes/productRoutes')
 const cameraRouters= require('./routes/cameraRouters')
+const cors = require('cors')
 
 require('dotenv').config();
 //* traemos la coneccion de nuestra base de datos las servidor
 require('./config/database');
 //* Instanciamos express
 
+
 const app = express();
 
 //* middleware
-
+app.use(cors())
 app.use(express.json());
 
 app.use('/users',userRouter);
