@@ -1,71 +1,104 @@
-//* importacion de la Referencia sobre la coleccion con su esquema determinado.
-const { error } = require('console');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const crypto = require('crypto')
 
-
-const createUser = async(req, res) => {
-   
-    try {
-
-        //* Validacion de email
-        const userEmail = await User.findOne({ email: req.body.email})
-        if(userEmail){
-            throw new Error('Email en uso')
-        }
-        //!Encriptar contraseña
-        
-
-        //* Guardar informacion en mi base de datos
-
-        const newUser = new User(req.body);
-        await newUser.save();
-
-
-        res.json({success: true, message: "Usuario Creado", info: newUser})
-            
-    } catch (error) {
-        res.json({success: false, message: error.message})
-    }
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512');
+  return {
+    salt: salt,
+    hashedPassword: hash.toString('hex')
+  };
 }
 
-const getUsers = async(req, res) => {
-    try {
-        const users = await User.find().populate('favoriteProducts');
-        res.json({success: true, info: users })
-    } catch (error) {
-        res.json({success: false, message: error.message})
-    }
+function generateToken(userId) {
+  return jwt.sign({ userId }, 'tu_secreto_secreto', { expiresIn: '1h' });
 }
 
-// Funciones actualizar y delete
-
-const editUser = async(req, res) => {
-
-    try {
-        // throw new Error('error forzado')
-        const {id} = req.params;
-        const contain = req.body;
-
-        const updateUser = await User.findByIdAndUpdate(id, contain, {new: true});
-
-        res.json({success: true, msg: "usuario actualizado", updateUser})
-    } catch (error) {
-        res.status(500).json({success: false, message: error.message})
-    }
+function verifyPassword(inputPassword, salt, hashedPassword) {
+  const hash = crypto.pbkdf2Sync(inputPassword, salt, 1000, 64, 'sha512').toString('hex');
+  return hash === hashedPassword;
 }
 
-const deleteUser =  async(req, res) => {
-    try {
-        // throw new Error('error forzado')
-        const {id} = req.params;
+const createUser = async (req, res) => {
+  try {
+    const { salt, hashedPassword } = hashPassword(req.body.password);
 
-        const destroyUser = await User.findByIdAndDelete(id);
+    const newUser = new User({
+      nombre: req.body.nombre,
+      apellido: req.body.apellido,
+      rut: req.body.rut,
+      edad: req.body.edad,
+      email: req.body.correo,
+      password: hashedPassword,
+      salt: salt,
+    });
 
-        res.json({success: true, msg: "usuario eliminado", destroyUser})
-    } catch (error) {
-        res.status(500).json({success: false, message: error.message})
+    await newUser.save();
+
+    res.json({ success: true, message: 'Usuario Creado', info: newUser });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+const registerUser = async (req, res) => {
+  try {
+    // Implementa la lógica para registrar al usuario aquí
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const loginUser = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body.correo });
+
+    if (!user) {
+      throw new Error('Usuario no encontrado');
     }
-}
 
-module.exports = {createUser, getUsers, editUser, deleteUser};
+    const isPasswordValid = verifyPassword(req.body.password, user.salt, user.password);
+
+    if (!isPasswordValid) {
+      throw new Error('Contraseña incorrecta');
+    }
+
+    const token = generateToken(user._id);
+
+    res.json({ success: true, message: 'Inicio de sesión exitoso', token });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getUsers = async (req, res) => {
+  try {
+    const users = await User.find().populate('favoriteProducts');
+    res.json({ success: true, info: users });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+const editUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updatedUser = await User.findByIdAndUpdate(id, req.body, { new: true });
+    res.json({ success: true, message: 'Usuario actualizado', info: updatedUser });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deletedUser = await User.findByIdAndDelete(id);
+    res.json({ success: true, message: 'Usuario eliminado', info: deletedUser });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { createUser, registerUser, loginUser, getUsers, editUser, deleteUser };

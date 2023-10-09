@@ -1,7 +1,21 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-    name: {
+    nombre: {
+        type: String,
+        default: "Nombre no especificado",
+        trim: true,
+        lowercase: true,
+        minLength: 2
+    },
+    apellido: {
+        type: String,
+        default: "Apellido no especificado",
+        trim: true,
+        lowercase: true,
+        minLength: 2
+    },
+    rut: {
         type: String,
         default: "Nombre no especificado",
         trim: true,
@@ -14,7 +28,7 @@ const userSchema = new mongoose.Schema({
         match: [/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g],
         required: true
     },
-    age: {
+    edad: {
         type: Number,
         min: 16,
         max: 120
